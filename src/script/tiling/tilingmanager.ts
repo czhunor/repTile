@@ -9,15 +9,20 @@
  *
  */
 import * as KWin from "../extern/kwin";
+import Log from "./log";
 
 export class TilingManager {
     private registeredWindows: KWin.Window[];
+    private logging: Log;
 
-    constructor() {
+    constructor(kwinLog: Log) {
         this.registeredWindows = [];
+        this.logging = kwinLog;
     }
 
     public registerWindow(window: KWin.Window) {
+        this.logging.printMessage("New Window registration started...");
+
         // Check if the Window is relevant for us
         if (this.isWindowRelevant(window)) {
             this.tileWindow(window);
@@ -41,6 +46,8 @@ export class TilingManager {
     private tileWindow(window: KWin.Window) {
         // Add the Window to the list
         this.registeredWindows.push(window);
+
+        this.logging.printMessage("New Window added to the Tiling Manager.");
 
         // Determine the Desktop on which the currently added Window has been added
 

@@ -17,22 +17,20 @@ export interface Window {
     minimized: boolean;
 
     desktopChanged: Qt.Signal<() => void>;
-    activitiesChanged: Qt.Signal<() => void>;
     screenChanged: Qt.Signal<() => void>;
-    tileChanged: Qt.Signal<() => void>;
     fullScreenChanged: Qt.Signal<() => void>;
     minimizedChanged: Qt.Signal<() => void>;
-    clientMaximizedStateChanged: Qt.Signal<
-        (c: Window, h: boolean, v: boolean) => void
-    >;
 }
 
 export interface Workspace {
     activeWindow: Window;
 
-    clientAdded: Qt.Signal<(c: Window) => void>;
-    clientRemoved: Qt.Signal<(c: Window) => void>;
-    clientActivated: Qt.Signal<(c: Window) => void>;
-    currentDesktopChanged: Qt.Signal<(d: number) => void>;
-    numberScreensChanged: Qt.Signal<() => void>;
+    windowAdded: Qt.Signal<(client: Window) => void>;
+    windowRemoved: Qt.Signal<(client: Window) => void>;
+    windowActivated: Qt.Signal<(client: Window) => void>;
+}
+
+export interface Root {
+    readonly workspace: Workspace;
+    print(sMessage: string): void;
 }
