@@ -11,7 +11,7 @@
  */
 class KWinLog {
     printMessage(sMessage) {
-        print(sMessage);
+        print("[ repTile ] - " + sMessage);
     }
 }
 
@@ -59,8 +59,8 @@ class KWinWrapper {
         return workspace.currentDesktop;
     }
 
-    setWindowPosition(window, x, y, width, height) {
-        window.frameGeometry = {
+    setWindowPosition(kwinWindow, x, y, width, height) {
+        kwinWindow.frameGeometry = {
             x: x,
             y: y,
             width: width,
@@ -68,9 +68,9 @@ class KWinWrapper {
         };
     }
 
-    getWindowDesktop(window) {
+    getWindowDesktop(kwinWindow) {
         // If the Window is on all desktops, the list is empty
-        return window.desktops[0];
+        return kwinWindow.desktops[0];
     }
 }
 
@@ -87,68 +87,124 @@ class TilingManager {
      * @param {KWinWrapper} kwinWrapper
      */
     constructor(kwinLog, kwinWrapper) {
+        /** @type {Windowz[]} */
         this.registeredWindows = [];
         this.logging = kwinLog;
         this.kwinWrapper = kwinWrapper;
         this.layout = new Layout(kwinLog, kwinWrapper);
     }
 
-    registerWindow(window) {
+    /**
+     * HOOK Method
+     *
+     * If a new Window is opened, this method is called from the corresponding hook
+     * @param {*} kwinWindow
+     */
+    registerWindow(kwinWindow) {
         this.logging.printMessage(
-            "New Window registration started for " + window.resourceName
+            "New Window registration started for: " + kwinWindow.resourceName
         );
 
         // Check if the Window is relevant for us
-        if (this.isWindowRelevant(window)) {
+        if (this._isWindowRelevant(kwinWindow)) {
             // Add the Window to the list
-            this.registeredWindows.push(window);
+            let addedWindow = new Windowz(kwinWindow.internalId, kwinWindow);
+            this.registeredWindows.push(addedWindow);
+
             this.logging.printMessage(
-                "New Window added to the Tiling Manager " + window.resourceName
+                "New Window added to the Tiling Manager: " +
+                    kwinWindow.resourceName
             );
             this.logging.printMessage(
-                "Already registered Windows" + this.registeredWindows
+                "Already registered Windows: " + this.registeredWindows
             );
 
-            this.tileWindowsOnDesktop(
-                this.kwinWrapper.getWindowDesktop(window)
+            // Execute Tiling on the desktop where the Window was opened
+            this._tileWindowsOnDesktop(
+                this.kwinWrapper.getWindowDesktop(kwinWindow)
             );
         }
     }
 
-    removeWindow(window) {
+    /**
+     * HOOK Method
+     *
+     * @param {*} kwinWindow
+     */
+    removeWindow(kwinWindow) {
         this.logging.printMessage(
-            "Window has been removed " + window.resourceName
+            "Window has been removed: " + kwinWindow.resourceName
         );
 
-        const index = this.registeredWindows.indexOf(window);
+        const index = this.registeredWindows.findIndex(
+            (element) => element.id === kwinWindow.internalId
+        );
 
         if (index !== -1) {
             this.registeredWindows.splice(index, 1);
 
-            this.tileWindowsOnDesktop(
-                this.kwinWrapper.getWindowDesktop(window)
+            this._tileWindowsOnDesktop(
+                this.kwinWrapper.getWindowDesktop(kwinWindow)
             );
         }
     }
 
-    minimizedChangedForWindow(window) {
+    /**
+     * HOOK Method
+     *
+     * @param {*} kwinWindow
+     */
+    minimizedChangedForWindow(kwinWindow) {
         this.logging.printMessage(
-            "Window minimized stat changed  " + window.resourceName
+            "Window minimized state changed: " + kwinWindow.resourceName
         );
         // execute Tiling for the Desktop, where the Window minimized state changed
-        this.tileWindowsOnDesktop(this.kwinWrapper.getWindowDesktop(window));
+        this._tileWindowsOnDesktop(
+            this.kwinWrapper.getWindowDesktop(kwinWindow)
+        );
     }
 
-    maximizedChangedForWindow(window) {
+    /**
+     * HOOK Method
+     *
+     * @param {*} kwinWindow
+     */
+    maximizedChangedForWindow(kwinWindow) {
         this.logging.printMessage(
-            "Window maximized stat changed  " + window.resourceName
+            "Window maximized state changed: " + kwinWindow.resourceName
         );
 
-        // execute Tiling for the Desktop, where the Window minimized state changed
-        this.tileWindowsOnDesktop(this.kwinWrapper.getWindowDesktop(window));
+        // Set maximized property for the maximized Window
+        let maximizedWindow = this.registeredWindows.find(
+            (element) => element.id === kwinWindow.internalId
+        );
+        if (maximizedWindow) {
+            // Assuming that the window was not maximized before :-)
+            maximizedWindow.isMaximized = maximizedWindow.isMaximized
+                ? false
+                : true;
+
+            // If exit maximize, execute Tiling again, otherwise the screen is completly covered by the maximized window
+            if (!maximizedWindow.isMaximized) {
+                // execute Tiling for the Desktop, where the Window minimized state changed
+                this._tileWindowsOnDesktop(
+                    this.kwinWrapper.getWindowDesktop(kwinWindow)
+                );
+            }
+        }
     }
 
-    isWindowRelevant(window) {
+    /**
+     * Decides if a Window should be Tiled or not
+     *
+     * @param {*} kwinWindow
+     * @param {Windowz} customWindow
+     * @returns
+     */
+    _isWindowRelevant(kwinWindow, customWindow = null) {
+        // TODO - Move every direct access to KWin API to the wrapper,
+        // since there are a lot of things, maybe put everything in the same method
+
         // Check wheter the Window is in the List defined in the Configuration to be skipped
         const ignoreList = [
             "krunner",
@@ -157,60 +213,75 @@ class TilingManager {
             "plasmashell",
             "",
         ];
-        if (ignoreList.indexOf(window.resourceName) !== -1) return false;
+        if (ignoreList.indexOf(kwinWindow.resourceName) !== -1) return false;
 
         // Check if the Window is not relevant based on his basic properties
-        if (window.fullScreen) return false;
-        if (window.dialog) return false;
-        if (window.splash) return false;
-        if (window.utility) return false;
-        if (window.dropdownMenu) return false;
-        if (window.tooltip) return false;
-        if (window.notification) return false;
-        if (window.criticalNotification) return false;
-        if (window.appletPopup) return false;
-        if (window.onScreenDisplay) return false;
-        if (window.comboBox) return false;
-        if (window.dndIcon) return false;
-        if (window.specialWindow) return false;
-        if (window.minimized) return false;
-        if (window.popupWindow) return false;
-        if (window.desktopWindow) return false;
-        if (window.toolbar) return false;
-        if (window.menu) return false;
+        if (kwinWindow.fullScreen) return false;
+        if (kwinWindow.dialog) return false;
+        if (kwinWindow.splash) return false;
+        if (kwinWindow.utility) return false;
+        if (kwinWindow.dropdownMenu) return false;
+        if (kwinWindow.tooltip) return false;
+        if (kwinWindow.notification) return false;
+        if (kwinWindow.criticalNotification) return false;
+        if (kwinWindow.appletPopup) return false;
+        if (kwinWindow.onScreenDisplay) return false;
+        if (kwinWindow.comboBox) return false;
+        if (kwinWindow.dndIcon) return false;
+        if (kwinWindow.specialWindow) return false;
+        if (kwinWindow.minimized) return false;
+        if (kwinWindow.popupWindow) return false;
+        if (kwinWindow.desktopWindow) return false;
+        if (kwinWindow.toolbar) return false;
+        if (kwinWindow.menu) return false;
 
-        if (!window.normalWindow) return false;
+        if (!kwinWindow.normalWindow) return false;
 
-        // #TODO if a Window is set to floated. Not supported yet!
+        // Custom Window checks
+        if (customWindow !== null && customWindow !== undefined) {
+            if (customWindow.isMaximized) return false;
+        }
 
         return true;
     }
 
-    tileWindowsOnDesktop(desktop) {
+    _tileWindowsOnDesktop(desktop) {
+        if (desktop === undefined || desktop === null) {
+            return;
+        }
+
         this.logging.printMessage("Tiling executed on Desktop: " + desktop);
 
         // Get all relevant Windows on the Desktop
-        let windowsForDesktop = this.getWindowsForDesktop(desktop);
-        this.logging.printMessage(
-            "-> windows found there: " + windowsForDesktop
-        );
-
+        let windowsForDesktop = this._getWindowsForDesktop(desktop);
         // Call the Layout Manager to tile the Desktop
         this.layout.tileWindowsOnDesktop(desktop, windowsForDesktop);
     }
 
-    getWindowsForDesktop(desktop) {
+    _getWindowsForDesktop(desktop) {
         let windowsForDesktop = [];
 
-        this.registeredWindows.forEach((window) => {
-            if (this.kwinWrapper.getWindowDesktop(window) === desktop) {
+        this.registeredWindows.forEach((customWindow) => {
+            if (
+                this.kwinWrapper.getWindowDesktop(customWindow.kwinWindow) ===
+                desktop
+            ) {
                 // Only add the window to the results if it is still in a relevan state
                 // e.g. if change on the minimized, fullscreen, set to floating happens
-                if (this.isWindowRelevant(window)) {
-                    windowsForDesktop.push(window);
+                if (
+                    this._isWindowRelevant(
+                        customWindow.kwinWindow,
+                        customWindow
+                    )
+                ) {
+                    windowsForDesktop.push(customWindow.kwinWindow);
                 }
             }
         });
+
+        this.logging.printMessage(
+            "-> windows found there: " + windowsForDesktop
+        );
         return windowsForDesktop;
     }
 }
@@ -226,7 +297,7 @@ class Layout {
         this.kwinWrapper = kwinWrapper;
     }
 
-    tileWindowsOnDesktop(desktop, windows) {
+    tileWindowsOnDesktop(desktop, kwinWindows) {
         // Padding around the Windows in Pixel,
         // it will be considered during the calculation of the Window sizes
         const padding = 10;
@@ -243,32 +314,32 @@ class Layout {
         // First one in the list is always the Root Window, the others follow in the order
 
         // -> if no windows on desktop, nothing to do
-        if (windows === undefined || windows.length === 0) {
+        if (kwinWindows === undefined || kwinWindows.length === 0) {
             return;
         }
 
-        // -> only one window is found, set the maximum size possible
-        if (windows.length === 1) {
+        // -> only one kwinWindow is found, set the maximum size possible
+        if (kwinWindows.length === 1) {
             const windowXPos = screenXPos;
             const windowYPos = screenYPos;
             const windowWidth = screenWidth;
             const windowHeight = screenHeight;
 
             this.kwinWrapper.setWindowPosition(
-                windows[0],
+                kwinWindows[0],
                 windowXPos,
                 windowYPos,
                 windowWidth,
                 windowHeight
             );
             this.logging.printMessage(
-                "-> set Window to Fullscreen " + windows[0].resourceName
+                "-> set Window to Fullscreen " + kwinWindows[0].resourceName
             );
         }
 
         // -> if there are more windows
-        if (windows.length > 1) {
-            const nrOfSecondaryWindwos = windows.length - 1;
+        if (kwinWindows.length > 1) {
+            const nrOfSecondaryWindwos = kwinWindows.length - 1;
 
             // Determine Root and Secondary Window sizes
             const rootWindowWidth =
@@ -287,7 +358,7 @@ class Layout {
             let windowWidth = 0;
             let windowHeight = 0;
 
-            for (let i = 0; i < windows.length; i++) {
+            for (let i = 0; i < kwinWindows.length; i++) {
                 // Root Window is always the first one
                 if (i === 0) {
                     windowWidth = rootWindowWidth;
@@ -296,7 +367,8 @@ class Layout {
                     windowYPos = screenYPos;
 
                     this.logging.printMessage(
-                        "-> set Root Window position " + windows[i].resourceName
+                        "-> set Root Window position " +
+                            kwinWindows[i].resourceName
                     );
                 } else {
                     windowWidth = secondaryWindowWidth;
@@ -309,12 +381,12 @@ class Layout {
 
                     this.logging.printMessage(
                         "-> set Secondary Window position " +
-                            windows[i].resourceName
+                            kwinWindows[i].resourceName
                     );
                 }
 
                 this.kwinWrapper.setWindowPosition(
-                    windows[i],
+                    kwinWindows[i],
                     windowXPos,
                     windowYPos,
                     windowWidth,
@@ -322,6 +394,15 @@ class Layout {
                 );
             }
         }
+    }
+}
+
+class Windowz {
+    constructor(id, kwinWindow) {
+        this.id = id; // KWin Window  - internalId
+        this.kwinWindow = kwinWindow; // KWin Window
+        this.isFloating = null;
+        this.isMaximized = null;
     }
 }
 
