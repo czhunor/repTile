@@ -3,6 +3,8 @@
 // we have to adapt only this section of the code. The main logic can remain unchanged if there are
 // no breaking changes.
 
+const MaximizeMode = { Maximized: 3, Normal: 0 };
+
 /**
  * Wrapper for the print Function (like console.log())
  * In order to see the result of the Log, you have to follow the steps, described on the offical KDE site:
@@ -10,8 +12,16 @@
  *
  */
 class KWinLog {
+    /**
+     * @param {Configuration} knwinConfiguration
+     */
+    constructor(knwinConfiguration) {
+        this.globalConfiguration = knwinConfiguration;
+    }
     printMessage(sMessage) {
-        print("[ repTile ] - " + sMessage);
+        if (this.globalConfiguration.isLoggingEnabled) {
+            print("[ repTile ] - " + sMessage);
+        }
     }
 }
 
@@ -68,6 +78,10 @@ class KWinWrapper {
         };
     }
 
+    getWindowPosition(kwinWindow) {
+        return kwinWindow.frameGeometry;
+    }
+
     getWindowDesktop(kwinWindow) {
         // If the Window is on all desktops, the list is empty
         return kwinWindow.desktops[0];
@@ -85,13 +99,15 @@ class TilingManager {
      *
      * @param {KWinLog} kwinLog
      * @param {KWinWrapper} kwinWrapper
+     * @param {Configuration} knwinConfiguration
      */
-    constructor(kwinLog, kwinWrapper) {
+    constructor(kwinLog, kwinWrapper, knwinConfiguration) {
         /** @type {Windowz[]} */
         this.registeredWindows = [];
         this.logging = kwinLog;
         this.kwinWrapper = kwinWrapper;
-        this.layout = new Layout(kwinLog, kwinWrapper);
+        this.globalConfiguration = knwinConfiguration;
+        this.layout = new Layout(kwinLog, kwinWrapper, knwinConfiguration);
     }
 
     /**
@@ -168,21 +184,24 @@ class TilingManager {
      * HOOK Method
      *
      * @param {*} kwinWindow
+     * @param {*} maximizeMode
      */
-    maximizedChangedForWindow(kwinWindow) {
+    maximizedChangedForWindow(kwinWindow, maximizeMode) {
         this.logging.printMessage(
-            "Window maximized state changed: " + kwinWindow.resourceName
+            "Window maximized state changed: " +
+                kwinWindow.resourceName +
+                ". MaximizedMode: " +
+                maximizeMode
         );
 
         // Set maximized property for the maximized Window
         let maximizedWindow = this.registeredWindows.find(
-            (element) => element.id === kwinWindow.internalId
+            (element) => element.id === kwinWindow.internalId // TODO - move Internal ID to the Wrapper
         );
         if (maximizedWindow) {
             // Assuming that the window was not maximized before :-)
-            maximizedWindow.isMaximized = maximizedWindow.isMaximized
-                ? false
-                : true;
+            maximizedWindow.isMaximized =
+                maximizeMode == MaximizeMode.Maximized ? true : false;
 
             // If exit maximize, execute Tiling again, otherwise the screen is completly covered by the maximized window
             if (!maximizedWindow.isMaximized) {
@@ -191,6 +210,79 @@ class TilingManager {
                     this.kwinWrapper.getWindowDesktop(kwinWindow)
                 );
             }
+        }
+    }
+
+    moveResizedChangedForWindow(kwinWindow) {
+        let movedOrResizedWindow = this.registeredWindows.find(
+            (element) => element.id === kwinWindow.internalId
+        );
+
+        if (
+            movedOrResizedWindow &&
+            movedOrResizedWindow.isMoved === null &&
+            movedOrResizedWindow.isResized === null
+        ) {
+            // TODO - move move and resize to the Wrapper
+
+            movedOrResizedWindow.isMoved = kwinWindow.move;
+            this.logging.printMessage(
+                "-> moving: " + movedOrResizedWindow.isMoved
+            );
+            movedOrResizedWindow.isResized = kwinWindow.resize;
+            this.logging.printMessage(
+                "-> resizing: " + movedOrResizedWindow.isResized
+            );
+        }
+    }
+
+    interactiveMoveResizeFinishedForWindow(kwinWindow) {
+        let movedOrResizedWindow = this.registeredWindows.find(
+            (element) => element.id === kwinWindow.internalId
+        );
+        if (movedOrResizedWindow) {
+            // TODO - move move and resize to the Wrapper
+            this.logging.printMessage(
+                "Window move/resize finished (moved: " +
+                    movedOrResizedWindow.isMoved +
+                    " resized: " +
+                    movedOrResizedWindow.isResized
+            );
+
+            // RESIZING
+            // -> If resized, tile the windows back to the defined layout
+            if (movedOrResizedWindow.isResized) {
+                this._tileWindowsOnDesktop(
+                    this.kwinWrapper.getWindowDesktop(kwinWindow)
+                );
+            }
+
+            // MOVING
+            // -> Have to check if there is a Window below the new position of the moved Window.
+            //    If so, swap the places
+            if (movedOrResizedWindow.isMoved) {
+                const windowBelowTheMovedWindow =
+                    this._getWindowBelowTheWindow(kwinWindow);
+
+                this.logging.printMessage(
+                    "-> below the moved window: " + windowBelowTheMovedWindow
+                );
+
+                if (windowBelowTheMovedWindow) {
+                    this._swapWindowPlaces(
+                        kwinWindow,
+                        windowBelowTheMovedWindow
+                    );
+
+                    this._tileWindowsOnDesktop(
+                        this.kwinWrapper.getWindowDesktop(kwinWindow)
+                    );
+                }
+            }
+
+            // Set back the default value after the Move/Resize is finished
+            movedOrResizedWindow.isMoved = null;
+            movedOrResizedWindow.isResized = null;
         }
     }
 
@@ -205,14 +297,11 @@ class TilingManager {
         // TODO - Move every direct access to KWin API to the wrapper,
         // since there are a lot of things, maybe put everything in the same method
 
+        if (!this.globalConfiguration.isTilingEnabled) return false;
+
         // Check wheter the Window is in the List defined in the Configuration to be skipped
-        const ignoreList = [
-            "krunner",
-            "yakuake",
-            "spectacle",
-            "plasmashell",
-            "",
-        ];
+        const ignoreList = this.globalConfiguration.ignoreList;
+
         if (ignoreList.indexOf(kwinWindow.resourceName) !== -1) return false;
 
         // Check if the Window is not relevant based on his basic properties
@@ -284,6 +373,80 @@ class TilingManager {
         );
         return windowsForDesktop;
     }
+
+    _getWindowBelowTheWindow(movedWindow) {
+        let windowBelowTheMovedWindow = undefined;
+        const movedWindowPosition =
+            this.kwinWrapper.getWindowPosition(movedWindow);
+
+        this.logging.printMessage(
+            "-> moved windows new position: " + movedWindowPosition
+        );
+
+        // determine the mid point of the moved Window
+        const midPointX = movedWindowPosition.x + movedWindowPosition.width / 2;
+        const midPointY =
+            movedWindowPosition.y + movedWindowPosition.height / 2;
+
+        // Check which Window is below the mid point
+        // get all Windows for the Desktop
+        const windowsForDesktop = this._getWindowsForDesktop(
+            this.kwinWrapper.getWindowDesktop(movedWindow)
+        );
+        // remove the moved Window from the list, since we dont want to swap with the same one
+        windowsForDesktop.splice(windowsForDesktop.indexOf(movedWindow), 1);
+
+        if (windowsForDesktop.length > 0) {
+            windowsForDesktop.forEach((windowForDesktop) => {
+                const windowForDesktopPosition =
+                    this.kwinWrapper.getWindowPosition(windowForDesktop);
+
+                if (
+                    // mid point X is between the Windows X and X + Width
+                    midPointX >= windowForDesktopPosition.x &&
+                    midPointX <=
+                        windowForDesktopPosition.x +
+                            windowForDesktopPosition.width &&
+                    // mid point Y is between the Windows Y and Y + Height
+                    midPointY >= windowForDesktopPosition.y &&
+                    midPointY <=
+                        windowForDesktopPosition.y +
+                            windowForDesktopPosition.height
+                ) {
+                    // The mid point is on top of the Window
+                    windowBelowTheMovedWindow = windowForDesktop;
+                }
+            });
+        }
+
+        return windowBelowTheMovedWindow;
+    }
+
+    _swapWindowPlaces(windowOne, windowTwo) {
+        // Find the indexes of the Windows to be swapped
+        const indexWindowOne = this.registeredWindows.findIndex(
+            (element) => element.id === windowOne.internalId
+        );
+        const indexWindowTwo = this.registeredWindows.findIndex(
+            (element) => element.id === windowTwo.internalId
+        );
+        this.logging.printMessage(
+            "-> Swapping Windows: " + windowOne + ", " + windowTwo
+        );
+        this.logging.printMessage("-> index WindowOne: " + indexWindowOne);
+        this.logging.printMessage("-> index WindowTwo: " + indexWindowTwo);
+
+        // Swap places
+        const tempWindowOne = this.registeredWindows[indexWindowOne];
+
+        this.registeredWindows[indexWindowOne] =
+            this.registeredWindows[indexWindowTwo];
+        this.registeredWindows[indexWindowTwo] = tempWindowOne;
+
+        this.logging.printMessage(
+            "-> registered Windows after Swapping: " + this.registeredWindows
+        );
+    }
 }
 
 class Layout {
@@ -291,17 +454,20 @@ class Layout {
      *
      * @param {KWinLog} kwinLog
      * @param {KWinWrapper} kwinWrapper
+     * @param {Configuration} knwinConfiguration
      */
-    constructor(kwinLog, kwinWrapper) {
+    constructor(kwinLog, kwinWrapper, knwinConfiguration) {
         this.logging = kwinLog;
         this.kwinWrapper = kwinWrapper;
+        this.globalConfiguration = knwinConfiguration;
     }
 
     tileWindowsOnDesktop(desktop, kwinWindows) {
         // Padding around the Windows in Pixel,
         // it will be considered during the calculation of the Window sizes
-        const padding = 10;
-        const rootWindowDefaultSizeInPercentage = 0.65;
+        const padding = this.globalConfiguration.padding;
+        const rootWindowDefaultSizeInPercentage =
+            this.globalConfiguration.rootWindowDefaultSizeInPercentage;
 
         const screenXPos = this.kwinWrapper.getActiveScreenXPos() + padding;
         const screenYPos = this.kwinWrapper.getActiveScreenYPos() + padding;
@@ -363,7 +529,11 @@ class Layout {
                 if (i === 0) {
                     windowWidth = rootWindowWidth;
                     windowHeight = rootWindowHeight;
-                    windowXPos = screenWidth - windowWidth + padding;
+                    windowXPos =
+                        this.globalConfiguration.rootWindowPosition ===
+                        Position.Right
+                            ? screenWidth - windowWidth + padding
+                            : screenXPos;
                     windowYPos = screenYPos;
 
                     this.logging.printMessage(
@@ -373,7 +543,11 @@ class Layout {
                 } else {
                     windowWidth = secondaryWindowWidth;
                     windowHeight = secondaryWindowHeight;
-                    windowXPos = screenXPos;
+                    windowXPos =
+                        this.globalConfiguration.rootWindowPosition ===
+                        Position.Right
+                            ? screenXPos
+                            : screenXPos; // TODO has to be defined
                     windowYPos =
                         screenYPos +
                         (i - 1) * secondaryWindowHeight +
@@ -401,8 +575,10 @@ class Windowz {
     constructor(id, kwinWindow) {
         this.id = id; // KWin Window  - internalId
         this.kwinWindow = kwinWindow; // KWin Window
-        this.isFloating = null;
-        this.isMaximized = null;
+        this.isFloating = false;
+        this.isMaximized = false;
+        this.isMoved = null;
+        this.isResized = null;
     }
 }
 
@@ -413,8 +589,15 @@ class Configuration {
         this.rootWindowDefaultSizeInPercentage = 0.65;
         this.rootWindowPosition = Position.Right;
         this.padding = 10;
-        this.ignoreList = ["krunner", "yakuake", "spectacle", "plasmashell"];
+        this.ignoreList = [
+            "krunner",
+            "yakuake",
+            "spectacle",
+            "plasmashell",
+            "", // Needed for dummy windows
+        ];
         this.isTilingEnabled = true;
+        this.isLoggingEnabled = true;
     }
 }
 
@@ -422,14 +605,42 @@ class Configuration {
 //                      Initialization and execution                         //
 
 // Initialize Wrapper Classes
-const kwinLog = new KWinLog();
+const knwinConfiguration = new Configuration();
 const kwinWrapper = new KWinWrapper();
+const kwinLog = new KWinLog(knwinConfiguration);
 
 // Tiling Manager
-const tilingManager = new TilingManager(kwinLog, kwinWrapper);
+const tilingManager = new TilingManager(
+    kwinLog,
+    kwinWrapper,
+    knwinConfiguration
+);
 
+// Initial execution of the script, register every already opened Window and register
+// the Hook methods also, otherwise it will be necesarry to close the apps and restart them to work properly.
 let windows = workspace.stackingOrder;
 for (let i = 0; i < windows.length; i++) {
+    // Register the Hooks
+    // -> In case the Window is minimized, we have to react
+    windows[i].minimizedChanged.connect(() => {
+        tilingManager.minimizedChangedForWindow(windows[i]);
+    });
+
+    // -> In case the Window is minimized, we have to react
+    windows[i].maximizedAboutToChange.connect((maximizeMode) => {
+        tilingManager.maximizedChangedForWindow(windows[i], maximizeMode);
+    });
+
+    // -> When the Window is moved or resized, we will store the state of the action for later
+    windows[i].moveResizedChanged.connect(() => {
+        tilingManager.moveResizedChangedForWindow(windows[i]);
+    });
+
+    windows[i].interactiveMoveResizeFinished.connect(() => {
+        tilingManager.interactiveMoveResizeFinishedForWindow(windows[i]);
+    });
+
+    // Execute Tiling the first time
     tilingManager.registerWindow(windows[i]);
 }
 
@@ -443,8 +654,17 @@ workspace.windowAdded.connect((window) => {
     });
 
     // In case the Window is minimized, we have to react
-    window.maximizedChanged.connect(() => {
-        tilingManager.maximizedChangedForWindow(window);
+    window.maximizedAboutToChange.connect((maximizeMode) => {
+        tilingManager.maximizedChangedForWindow(window, maximizeMode);
+    });
+
+    // When the Window is moved or resized, we will store the state of the action for later
+    window.moveResizedChanged.connect(() => {
+        tilingManager.moveResizedChangedForWindow(window);
+    });
+
+    window.interactiveMoveResizeFinished.connect(() => {
+        tilingManager.interactiveMoveResizeFinishedForWindow(window);
     });
 
     // Attach the Tiling manager for Windows Added
