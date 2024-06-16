@@ -22,7 +22,7 @@ export class KWinLog {
     }
     printMessage(sMessage) {
         if (this.globalConfiguration.isLoggingEnabled) {
-            print("[ repTile ] - " + sMessage);
+            print("repTile: " + sMessage);
         }
     }
 }

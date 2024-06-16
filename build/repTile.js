@@ -14,7 +14,7 @@
         ""
         // Needed for dummy windows
       ];
-      this.registerAsRoot = ["vscodium"];
+      this.registerAsRoot = ["vscodium", "codium", "code", "brave-browser"];
       this.isTilingEnabled = true;
       this.isLoggingEnabled = true;
     }
@@ -31,7 +31,7 @@
     }
     printMessage(sMessage) {
       if (this.globalConfiguration.isLoggingEnabled) {
-        print("[ repTile ] - " + sMessage);
+        print("repTile: " + sMessage);
       }
     }
   };
@@ -183,7 +183,7 @@
           if (i === 0) {
             windowWidth = rootWindowWidth;
             windowHeight = rootWindowHeight;
-            windowXPos = this.globalConfiguration.rootWindowPosition === Position.Right ? screenWidth - windowWidth + padding : screenXPos;
+            windowXPos = this.globalConfiguration.rootWindowPosition === Position.Right ? screenXPos + secondaryWindowWidth + padding : screenXPos;
             windowYPos = screenYPos;
             this.logging.printMessage(
               "-> set Root Window position " + this.kwinWrapper.getWindowResourceName(
@@ -193,7 +193,7 @@
           } else {
             windowWidth = secondaryWindowWidth;
             windowHeight = secondaryWindowHeight;
-            windowXPos = this.globalConfiguration.rootWindowPosition === Position.Right ? screenXPos : screenXPos;
+            windowXPos = this.globalConfiguration.rootWindowPosition === Position.Right ? screenXPos : screenXPos + rootWindowWidth + padding;
             windowYPos = screenYPos + (i - 1) * secondaryWindowHeight + (i - 1) * padding;
             this.logging.printMessage(
               "-> set Secondary Window position " + this.kwinWrapper.getWindowResourceName(
@@ -242,15 +242,11 @@
       if (this._isWindowRelevant(kwinWindow)) {
         let addedWindow = new Windowz(
           this.kwinWrapper.getWindowInternalId(kwinWindow),
-          kwinWindow
+          kwinWindow,
+          this.kwinWrapper.getWindowDesktop(kwinWindow)
         );
-        this.registeredWindows.push(addedWindow);
-        this.logging.printMessage(
-          "New Window added to the Tiling Manager: " + this.kwinWrapper.getWindowResourceName(kwinWindow)
-        );
-        this.logging.printMessage(
-          "Already registered Windows: " + this.registeredWindows
-        );
+        this._shouldWindowRegisterAsRoot(kwinWindow) ? this.registeredWindows.unshift(addedWindow) : this.registeredWindows.push(addedWindow);
+        this.logging.printMessage("-> window added to the Tiling Manager");
         this._tileWindowsOnDesktop(
           this.kwinWrapper.getWindowDesktop(kwinWindow)
         );
@@ -264,14 +260,11 @@
      * @param {*} kwinWindow
      */
     removeWindow(kwinWindow) {
-      this.logging.printMessage(
-        "Window has been removed: " + this.kwinWrapper.getWindowResourceName(kwinWindow)
-      );
-      const index = this._getRegisteredWindowIndexById(
-        this.kwinWrapper.getWindowInternalId(kwinWindow)
-      );
-      if (index !== -1) {
-        this.registeredWindows.splice(index, 1);
+      const isWindowSuccessfullyRemoved = this._removeWindowFromRegisteredList(kwinWindow);
+      if (isWindowSuccessfullyRemoved) {
+        this.logging.printMessage(
+          "Window has been removed: " + this.kwinWrapper.getWindowResourceName(kwinWindow)
+        );
         this._tileWindowsOnDesktop(
           this.kwinWrapper.getWindowDesktop(kwinWindow)
         );
@@ -319,6 +312,38 @@
     }
     /**
      * HOOK Method
+     * Window has been moved to another Desktop, we have to re-tile the old desktop
+     * and add to the new one.
+     *
+     * @param {*} kwinWindow
+     */
+    desktopChangedForWindow(kwinWindow) {
+      this.logging.printMessage(
+        "Desktop changed for Window: " + this.kwinWrapper.getWindowResourceName(kwinWindow)
+      );
+      let registeredWindow = this._getRegisteredWindowById(
+        this.kwinWrapper.getWindowInternalId(kwinWindow)
+      );
+      const oldDesktop = registeredWindow.kwinDesktop;
+      const newDesktop = this.kwinWrapper.getWindowDesktop(kwinWindow);
+      this.logging.printMessage("-> old Desktop: " + oldDesktop);
+      this.logging.printMessage("-> new Desktop: " + newDesktop);
+      const isWindowSuccessfullyRemoved = this._removeWindowFromRegisteredList(kwinWindow);
+      if (isWindowSuccessfullyRemoved) {
+        this.logging.printMessage(
+          "-> window has been removed: " + this.kwinWrapper.getWindowResourceName(kwinWindow)
+        );
+        this._tileWindowsOnDesktop(oldDesktop);
+      }
+      if (this._isWindowRelevant(kwinWindow, registeredWindow)) {
+        registeredWindow.kwinDesktop = newDesktop;
+        this._shouldWindowRegisterAsRoot(kwinWindow) ? this.registeredWindows.unshift(registeredWindow) : this.registeredWindows.push(registeredWindow);
+        this.logging.printMessage("-> window added to the Tiling Manager");
+        this._tileWindowsOnDesktop(newDesktop);
+      }
+    }
+    /**
+     * HOOK Method
      * Since there is no other way to know at the end of a Moving/Resizing what actually happened
      * the state is stored for future use, e.g. in the interactiveMoveResizeFinishedForWindow method
      *
@@ -331,11 +356,11 @@
       if (movedOrResizedWindow && movedOrResizedWindow.isMoved === null && movedOrResizedWindow.isResized === null) {
         movedOrResizedWindow.isMoved = this.kwinWrapper.getWindowMove(kwinWindow);
         this.logging.printMessage(
-          "-> moving: " + movedOrResizedWindow.isMoved
+          "-> is window moving: " + movedOrResizedWindow.isMoved
         );
         movedOrResizedWindow.isResized = this.kwinWrapper.getWindowResize(kwinWindow);
         this.logging.printMessage(
-          "-> resizing: " + movedOrResizedWindow.isResized
+          "-> is window resizing: " + movedOrResizedWindow.isResized
         );
       }
     }
@@ -361,10 +386,12 @@
         }
         if (movedOrResizedWindow.isMoved) {
           const windowBelowTheMovedWindow = this._getWindowBelowTheWindow(kwinWindow);
-          this.logging.printMessage(
-            "-> below the moved window: " + windowBelowTheMovedWindow
-          );
           if (windowBelowTheMovedWindow) {
+            this.logging.printMessage(
+              "-> window below the moved window: " + this.kwinWrapper.getWindowResourceName(
+                windowBelowTheMovedWindow
+              )
+            );
             this._swapWindowPlaces(
               kwinWindow,
               windowBelowTheMovedWindow
@@ -410,7 +437,7 @@
       if (desktop === void 0 || desktop === null) {
         return;
       }
-      this.logging.printMessage("Tiling executed on Desktop: " + desktop);
+      this.logging.printMessage("-> tiling executed on Desktop: " + desktop);
       let windowsForDesktop = this._getWindowsForDesktop(desktop);
       this.layout.tileWindowsOnDesktop(desktop, windowsForDesktop);
     }
@@ -432,9 +459,6 @@
           }
         }
       });
-      this.logging.printMessage(
-        "-> windows found there: " + windowsForDesktop
-      );
       return windowsForDesktop;
     }
     /**
@@ -483,16 +507,38 @@
         this.kwinWrapper.getWindowInternalId(windowTwo)
       );
       this.logging.printMessage(
-        "-> Swapping Windows: " + windowOne + ", " + windowTwo
+        "-> swapping Windows: " + windowOne + ", " + windowTwo
       );
-      this.logging.printMessage("-> index WindowOne: " + indexWindowOne);
-      this.logging.printMessage("-> index WindowTwo: " + indexWindowTwo);
+      this.logging.printMessage("--> index WindowOne: " + indexWindowOne);
+      this.logging.printMessage("--> index WindowTwo: " + indexWindowTwo);
       const tempWindowOne = this.registeredWindows[indexWindowOne];
       this.registeredWindows[indexWindowOne] = this.registeredWindows[indexWindowTwo];
       this.registeredWindows[indexWindowTwo] = tempWindowOne;
+    }
+    /**
+     * Checks wether the Window should be added as Root at the beginning
+     *
+     * @param {*} kwinWindow
+     * @returns
+     */
+    _shouldWindowRegisterAsRoot(kwinWindow) {
+      const registerAsRoot = this.globalConfiguration.registerAsRoot;
+      const shouldWindowRegisterAsRoot = registerAsRoot.indexOf(
+        this.kwinWrapper.getWindowResourceName(kwinWindow)
+      ) !== -1 ? true : false;
       this.logging.printMessage(
-        "-> registered Windows after Swapping: " + this.registeredWindows
+        "-> should Window Register As Root: " + shouldWindowRegisterAsRoot
       );
+      return shouldWindowRegisterAsRoot;
+    }
+    _removeWindowFromRegisteredList(kwinWindow) {
+      const index = this._getRegisteredWindowIndexById(
+        this.kwinWrapper.getWindowInternalId(kwinWindow)
+      );
+      if (index !== -1) {
+        this.registeredWindows.splice(index, 1);
+        return true;
+      } else return false;
     }
     _getRegisteredWindowById(id) {
       return this.registeredWindows.find((element) => element.id === id);
@@ -502,9 +548,10 @@
     }
   };
   var Windowz = class {
-    constructor(id, kwinWindow) {
+    constructor(id, kwinWindow, desktop) {
       this.id = id;
       this.kwinWindow = kwinWindow;
+      this.kwinDesktop = desktop;
       this.isFloating = false;
       this.isMaximized = false;
       this.isMoved = null;
@@ -535,6 +582,9 @@
     windows[i].interactiveMoveResizeFinished.connect(() => {
       tilingManager.interactiveMoveResizeFinishedForWindow(windows[i]);
     });
+    windows[i].desktopsChanged.connect(() => {
+      tilingManager.desktopChangedForWindow(windows[i]);
+    });
     tilingManager.registerWindow(windows[i]);
   }
   workspace.windowAdded.connect((window) => {
@@ -549,6 +599,9 @@
     });
     window.interactiveMoveResizeFinished.connect(() => {
       tilingManager.interactiveMoveResizeFinishedForWindow(window);
+    });
+    window.desktopsChanged.connect(() => {
+      tilingManager.desktopChangedForWindow(window);
     });
     tilingManager.registerWindow(window);
   });

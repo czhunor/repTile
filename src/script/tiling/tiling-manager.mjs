@@ -37,22 +37,20 @@ export default class TilingManager {
                 this.kwinWrapper.getWindowResourceName(kwinWindow)
         );
 
-        // Check if the Window is relevant for us
+        // Check if the Window is relevant
         if (this._isWindowRelevant(kwinWindow)) {
             // Add the Window to the list
             let addedWindow = new Windowz(
                 this.kwinWrapper.getWindowInternalId(kwinWindow),
-                kwinWindow
+                kwinWindow,
+                this.kwinWrapper.getWindowDesktop(kwinWindow)
             );
-            this.registeredWindows.push(addedWindow);
 
-            this.logging.printMessage(
-                "New Window added to the Tiling Manager: " +
-                    this.kwinWrapper.getWindowResourceName(kwinWindow)
-            );
-            this.logging.printMessage(
-                "Already registered Windows: " + this.registeredWindows
-            );
+            this._shouldWindowRegisterAsRoot(kwinWindow)
+                ? this.registeredWindows.unshift(addedWindow) // Add to the beginning of the list if it's Root
+                : this.registeredWindows.push(addedWindow); // otherwise, to the end
+
+            this.logging.printMessage("-> window added to the Tiling Manager");
 
             // Execute Tiling on the desktop where the Window was opened
             this._tileWindowsOnDesktop(
@@ -69,18 +67,15 @@ export default class TilingManager {
      * @param {*} kwinWindow
      */
     removeWindow(kwinWindow) {
-        this.logging.printMessage(
-            "Window has been removed: " +
-                this.kwinWrapper.getWindowResourceName(kwinWindow)
-        );
+        // Remove the window from the list and check if it was successfull
+        const isWindowSuccessfullyRemoved =
+            this._removeWindowFromRegisteredList(kwinWindow);
 
-        const index = this._getRegisteredWindowIndexById(
-            this.kwinWrapper.getWindowInternalId(kwinWindow)
-        );
-
-        if (index !== -1) {
-            this.registeredWindows.splice(index, 1);
-
+        if (isWindowSuccessfullyRemoved) {
+            this.logging.printMessage(
+                "Window has been removed: " +
+                    this.kwinWrapper.getWindowResourceName(kwinWindow)
+            );
             this._tileWindowsOnDesktop(
                 this.kwinWrapper.getWindowDesktop(kwinWindow)
             );
@@ -144,6 +139,58 @@ export default class TilingManager {
 
     /**
      * HOOK Method
+     * Window has been moved to another Desktop, we have to re-tile the old desktop
+     * and add to the new one.
+     *
+     * @param {*} kwinWindow
+     */
+    desktopChangedForWindow(kwinWindow) {
+        this.logging.printMessage(
+            "Desktop changed for Window: " +
+                this.kwinWrapper.getWindowResourceName(kwinWindow)
+        );
+
+        let registeredWindow = this._getRegisteredWindowById(
+            this.kwinWrapper.getWindowInternalId(kwinWindow)
+        );
+
+        const oldDesktop = registeredWindow.kwinDesktop;
+        const newDesktop = this.kwinWrapper.getWindowDesktop(kwinWindow);
+
+        this.logging.printMessage("-> old Desktop: " + oldDesktop);
+        this.logging.printMessage("-> new Desktop: " + newDesktop);
+
+        // REMOVE Window from the old Desktop and execute tiling if so
+        const isWindowSuccessfullyRemoved =
+            this._removeWindowFromRegisteredList(kwinWindow);
+
+        if (isWindowSuccessfullyRemoved) {
+            this.logging.printMessage(
+                "-> window has been removed: " +
+                    this.kwinWrapper.getWindowResourceName(kwinWindow)
+            );
+            // Execute tiling on the Old Desktop
+            this._tileWindowsOnDesktop(oldDesktop);
+        }
+
+        // REGISTER the Window again as a "new" one
+        // - Check if the Window is relevant
+        if (this._isWindowRelevant(kwinWindow, registeredWindow)) {
+            registeredWindow.kwinDesktop = newDesktop;
+
+            this._shouldWindowRegisterAsRoot(kwinWindow)
+                ? this.registeredWindows.unshift(registeredWindow) // Add to the beginning of the list if it's Root
+                : this.registeredWindows.push(registeredWindow); // otherwise, to the end
+
+            this.logging.printMessage("-> window added to the Tiling Manager");
+
+            // Execute Tiling on the desktop where the Window was moved
+            this._tileWindowsOnDesktop(newDesktop);
+        }
+    }
+
+    /**
+     * HOOK Method
      * Since there is no other way to know at the end of a Moving/Resizing what actually happened
      * the state is stored for future use, e.g. in the interactiveMoveResizeFinishedForWindow method
      *
@@ -162,13 +209,13 @@ export default class TilingManager {
             movedOrResizedWindow.isMoved =
                 this.kwinWrapper.getWindowMove(kwinWindow);
             this.logging.printMessage(
-                "-> moving: " + movedOrResizedWindow.isMoved
+                "-> is window moving: " + movedOrResizedWindow.isMoved
             );
             movedOrResizedWindow.isResized =
                 this.kwinWrapper.getWindowResize(kwinWindow);
 
             this.logging.printMessage(
-                "-> resizing: " + movedOrResizedWindow.isResized
+                "-> is window resizing: " + movedOrResizedWindow.isResized
             );
         }
     }
@@ -208,11 +255,14 @@ export default class TilingManager {
                 const windowBelowTheMovedWindow =
                     this._getWindowBelowTheWindow(kwinWindow);
 
-                this.logging.printMessage(
-                    "-> below the moved window: " + windowBelowTheMovedWindow
-                );
-
                 if (windowBelowTheMovedWindow) {
+                    this.logging.printMessage(
+                        "-> window below the moved window: " +
+                            this.kwinWrapper.getWindowResourceName(
+                                windowBelowTheMovedWindow
+                            )
+                    );
+
                     this._swapWindowPlaces(
                         kwinWindow,
                         windowBelowTheMovedWindow
@@ -274,7 +324,7 @@ export default class TilingManager {
             return;
         }
 
-        this.logging.printMessage("Tiling executed on Desktop: " + desktop);
+        this.logging.printMessage("-> tiling executed on Desktop: " + desktop);
 
         // Get all relevant Windows on the Desktop
         let windowsForDesktop = this._getWindowsForDesktop(desktop);
@@ -309,9 +359,9 @@ export default class TilingManager {
             }
         });
 
-        this.logging.printMessage(
+        /* this.logging.printMessage(
             "-> windows found there: " + windowsForDesktop
-        );
+        ); */
         return windowsForDesktop;
     }
 
@@ -385,10 +435,10 @@ export default class TilingManager {
         );
 
         this.logging.printMessage(
-            "-> Swapping Windows: " + windowOne + ", " + windowTwo
+            "-> swapping Windows: " + windowOne + ", " + windowTwo
         );
-        this.logging.printMessage("-> index WindowOne: " + indexWindowOne);
-        this.logging.printMessage("-> index WindowTwo: " + indexWindowTwo);
+        this.logging.printMessage("--> index WindowOne: " + indexWindowOne);
+        this.logging.printMessage("--> index WindowTwo: " + indexWindowTwo);
 
         // Swap places
         const tempWindowOne = this.registeredWindows[indexWindowOne];
@@ -396,10 +446,39 @@ export default class TilingManager {
         this.registeredWindows[indexWindowOne] =
             this.registeredWindows[indexWindowTwo];
         this.registeredWindows[indexWindowTwo] = tempWindowOne;
+    }
+
+    /**
+     * Checks wether the Window should be added as Root at the beginning
+     *
+     * @param {*} kwinWindow
+     * @returns
+     */
+    _shouldWindowRegisterAsRoot(kwinWindow) {
+        const registerAsRoot = this.globalConfiguration.registerAsRoot;
+
+        const shouldWindowRegisterAsRoot =
+            registerAsRoot.indexOf(
+                this.kwinWrapper.getWindowResourceName(kwinWindow)
+            ) !== -1
+                ? true
+                : false;
 
         this.logging.printMessage(
-            "-> registered Windows after Swapping: " + this.registeredWindows
+            "-> should Window Register As Root: " + shouldWindowRegisterAsRoot
         );
+        return shouldWindowRegisterAsRoot;
+    }
+
+    _removeWindowFromRegisteredList(kwinWindow) {
+        const index = this._getRegisteredWindowIndexById(
+            this.kwinWrapper.getWindowInternalId(kwinWindow)
+        );
+
+        if (index !== -1) {
+            this.registeredWindows.splice(index, 1);
+            return true; // If it was removed, return true
+        } else return false; // If the window was not in the list, return false
     }
 
     _getRegisteredWindowById(id) {
@@ -412,9 +491,10 @@ export default class TilingManager {
 }
 
 class Windowz {
-    constructor(id, kwinWindow) {
+    constructor(id, kwinWindow, desktop) {
         this.id = id; // KWin Window  - internalId
         this.kwinWindow = kwinWindow; // KWin Window
+        this.kwinDesktop = desktop; // KWin Desktop
         this.isFloating = false;
         this.isMaximized = false;
         this.isMoved = null;

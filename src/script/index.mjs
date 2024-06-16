@@ -41,6 +41,11 @@ for (let i = 0; i < windows.length; i++) {
         tilingManager.interactiveMoveResizeFinishedForWindow(windows[i]);
     });
 
+    // Window was moved to another Desktop
+    windows[i].desktopsChanged.connect(() => {
+        tilingManager.desktopChangedForWindow(windows[i]);
+    });
+
     // Execute Tiling the first time
     tilingManager.registerWindow(windows[i]);
 }
@@ -66,6 +71,11 @@ workspace.windowAdded.connect((window) => {
 
     window.interactiveMoveResizeFinished.connect(() => {
         tilingManager.interactiveMoveResizeFinishedForWindow(window);
+    });
+
+    // Window was moved to another Desktop
+    window.desktopsChanged.connect(() => {
+        tilingManager.desktopChangedForWindow(window);
     });
 
     // Attach the Tiling manager for Windows Added

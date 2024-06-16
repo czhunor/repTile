@@ -17,7 +17,7 @@ export class Configuration {
             "", // Needed for dummy windows
         ];
         // List of Windows which should be placed as Root Window when they are Opened the first time
-        this.registerAsRoot = ["vscodium"];
+        this.registerAsRoot = ["vscodium", "codium", "code", "brave-browser"];
         // Tiling toggle for all Windows on all Screens/Desktops
         this.isTilingEnabled = true;
         // Logging toggle for 'journalctl -f QT_CATEGORY=js QT_CATEGORY=kwin_scripting'

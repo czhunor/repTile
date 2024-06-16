@@ -85,7 +85,7 @@ export default class BaseLayout {
                     windowXPos =
                         this.globalConfiguration.rootWindowPosition ===
                         Position.Right
-                            ? screenWidth - windowWidth + padding
+                            ? screenXPos + secondaryWindowWidth + padding
                             : screenXPos;
                     windowYPos = screenYPos;
 
@@ -102,7 +102,7 @@ export default class BaseLayout {
                         this.globalConfiguration.rootWindowPosition ===
                         Position.Right
                             ? screenXPos
-                            : screenXPos; // TODO has to be defined
+                            : screenXPos + rootWindowWidth + padding;
                     windowYPos =
                         screenYPos +
                         (i - 1) * secondaryWindowHeight +
