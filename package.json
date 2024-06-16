@@ -1,0 +1,21 @@
+{
+    "name": "reptile",
+    "description": "A simple and small Tiling script for KDE",
+    "version": "0.1.0",
+    "main": "src/script/index.mjs",
+    "scripts": {
+        "build": "npx esbuild --bundle src/script/index.mjs --outfile=build/repTile.js --format=iife"
+    },
+    "devDependencies": {},
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/czhunor/repTile.git"
+    },
+    "keywords": [],
+    "author": "Hunor Czaka",
+    "license": "GPLv3",
+    "bugs": {
+        "url": "https://github.com/czhunor/repTile/issues"
+    },
+    "homepage": "https://github.com/czhunor/repTile"
+}

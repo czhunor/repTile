@@ -1,20 +1,20 @@
 {
-  "KPlugin": {
-    "Name": "repTile",
-    "Description": "A simple and small Tiling script for KDE.",
-    "Icon": "preferences-system-windows",
+    "KPlugin": {
+        "Name": "repTile",
+        "Description": "A simple and small Tiling script for KDE.",
+        "Icon": "preferences-system-windows",
 
-    "Authors": [
-      {
-        "Email": "czhunor@gmail.com",
-        "Name": "Hunor Czaka"
-      }
-    ],
-    "Id": "%NAME%",
-    "Version": "%VERSION%",
-    "License": "MIT"
-  },
-  "X-Plasma-API": "javascript",
-  "X-Plasma-MainScript": "code/main.js",
-  "KPackageStructure": "KWin/Script"
+        "Authors": [
+            {
+                "Email": "czhunor@gmail.com",
+                "Name": "Hunor Czaka"
+            }
+        ],
+        "Id": "%NAME%",
+        "Version": "%VERSION%",
+        "License": "GPLv3"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
 }
