@@ -37,26 +37,23 @@ export default class TilingManager {
                 this.kwinWrapper.getWindowResourceName(kwinWindow)
         );
 
-        // Check if the Window is relevant
-        if (this._isWindowRelevant(kwinWindow)) {
-            // Add the Window to the list
-            let addedWindow = new Windowz(
-                this.kwinWrapper.getWindowInternalId(kwinWindow),
-                kwinWindow,
-                this.kwinWrapper.getWindowDesktop(kwinWindow)
-            );
+        // Add the Window to the list
+        let addedWindow = new Windowz(
+            this.kwinWrapper.getWindowInternalId(kwinWindow),
+            kwinWindow,
+            this.kwinWrapper.getWindowDesktop(kwinWindow)
+        );
 
-            this._shouldWindowRegisterAsRoot(kwinWindow)
-                ? this.registeredWindows.unshift(addedWindow) // Add to the beginning of the list if it's Root
-                : this.registeredWindows.push(addedWindow); // otherwise, to the end
+        this._shouldWindowRegisterAsRoot(kwinWindow)
+            ? this.registeredWindows.unshift(addedWindow) // Add to the beginning of the list if it's Root
+            : this.registeredWindows.push(addedWindow); // otherwise, to the end
 
-            this.logging.printMessage("-> window added to the Tiling Manager");
+        this.logging.printMessage("-> window added to the Tiling Manager");
 
-            // Execute Tiling on the desktop where the Window was opened
-            this._tileWindowsOnDesktop(
-                this.kwinWrapper.getWindowDesktop(kwinWindow)
-            );
-        }
+        // Execute Tiling on the desktop where the Window was opened
+        this._tileWindowsOnDesktop(
+            this.kwinWrapper.getWindowDesktop(kwinWindow)
+        );
     }
 
     /**
@@ -175,18 +172,16 @@ export default class TilingManager {
 
         // REGISTER the Window again as a "new" one
         // - Check if the Window is relevant
-        if (this._isWindowRelevant(kwinWindow, registeredWindow)) {
-            registeredWindow.kwinDesktop = newDesktop;
+        registeredWindow.kwinDesktop = newDesktop;
 
-            this._shouldWindowRegisterAsRoot(kwinWindow)
-                ? this.registeredWindows.unshift(registeredWindow) // Add to the beginning of the list if it's Root
-                : this.registeredWindows.push(registeredWindow); // otherwise, to the end
+        this._shouldWindowRegisterAsRoot(kwinWindow)
+            ? this.registeredWindows.unshift(registeredWindow) // Add to the beginning of the list if it's Root
+            : this.registeredWindows.push(registeredWindow); // otherwise, to the end
 
-            this.logging.printMessage("-> window added to the Tiling Manager");
+        this.logging.printMessage("-> window added to the Tiling Manager");
 
-            // Execute Tiling on the desktop where the Window was moved
-            this._tileWindowsOnDesktop(newDesktop);
-        }
+        // Execute Tiling on the desktop where the Window was moved
+        this._tileWindowsOnDesktop(newDesktop);
     }
 
     /**
@@ -267,11 +262,10 @@ export default class TilingManager {
                         kwinWindow,
                         windowBelowTheMovedWindow
                     );
-
-                    this._tileWindowsOnDesktop(
-                        this.kwinWrapper.getWindowDesktop(kwinWindow)
-                    );
                 }
+                this._tileWindowsOnDesktop(
+                    this.kwinWrapper.getWindowDesktop(kwinWindow)
+                );
             }
 
             // Set back the default value after the Move/Resize is finished
