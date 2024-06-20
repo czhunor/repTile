@@ -21,65 +21,80 @@ const tilingManager = new TilingManager(
 // the Hook methods also, otherwise it will be necesarry to close the apps and restart them to work properly.
 let windows = workspace.stackingOrder;
 for (let i = 0; i < windows.length; i++) {
-    // Register the Hooks
-    // -> In case the Window is minimized, we have to react
-    windows[i].minimizedChanged.connect(() => {
-        tilingManager.minimizedChangedForWindow(windows[i]);
-    });
+    // Only register relevant Windows
+    if (tilingManager.isWindowRelevantForRegister(windows[i])) {
+        // Before we do anything, set the Maximized State to Maximize Restored
+        windows[i].setMaximize(false, false);
 
-    // -> In case the Window is minimized, we have to react
-    windows[i].maximizedAboutToChange.connect((maximizeMode) => {
-        tilingManager.maximizedChangedForWindow(windows[i], maximizeMode);
-    });
+        // Register the Hooks
+        // -> In case the Window is minimized, we have to react
+        windows[i].minimizedChanged.connect(() => {
+            tilingManager.minimizedChangedForWindow(windows[i]);
+        });
 
-    // -> When the Window is moved or resized, we will store the state of the action for later
-    windows[i].moveResizedChanged.connect(() => {
-        tilingManager.moveResizedChangedForWindow(windows[i]);
-    });
+        // -> In case the Window is minimized, we have to react
+        windows[i].maximizedAboutToChange.connect((maximizeMode) => {
+            tilingManager.maximizedChangedForWindow(windows[i], maximizeMode);
+        });
 
-    windows[i].interactiveMoveResizeFinished.connect(() => {
-        tilingManager.interactiveMoveResizeFinishedForWindow(windows[i]);
-    });
+        // -> When the Window is moved or resized, we will store the state of the action for later
+        windows[i].moveResizedChanged.connect(() => {
+            tilingManager.moveResizedChangedForWindow(windows[i]);
+        });
 
-    // Window was moved to another Desktop
-    windows[i].desktopsChanged.connect(() => {
-        tilingManager.desktopChangedForWindow(windows[i]);
-    });
+        windows[i].interactiveMoveResizeFinished.connect(() => {
+            tilingManager.interactiveMoveResizeFinishedForWindow(windows[i]);
+        });
 
-    // Execute Tiling the first time
-    tilingManager.registerWindow(windows[i]);
+        // Window was moved to another Desktop
+        windows[i].desktopsChanged.connect(() => {
+            tilingManager.desktopChangedForWindow(windows[i]);
+        });
+
+        // Execute Tiling the first time
+        tilingManager.registerWindow(windows[i]);
+    }
 }
 
 //---------------------------------------------------------------------------//
 //                      Register Hooks                                       //
 
 workspace.windowAdded.connect((window) => {
-    // In case the Window is minimized, we have to react
-    window.minimizedChanged.connect(() => {
-        tilingManager.minimizedChangedForWindow(window);
-    });
+    // Only register relevant Windows
+    if (tilingManager.isWindowRelevantForRegister(window)) {
+        // TODO Move to somewhere else
+        // Setting of some properties of the Windows in order to bahave normally within the
+        // tiling process
+        // Before we do anything, set the Maximized State to Maximize Restored
+        window.setMaximize(false, false);
 
-    // In case the Window is minimized, we have to react
-    window.maximizedAboutToChange.connect((maximizeMode) => {
-        tilingManager.maximizedChangedForWindow(window, maximizeMode);
-    });
+        // In case the Window is minimized, we have to react
+        window.minimizedChanged.connect(() => {
+            tilingManager.minimizedChangedForWindow(window);
+        });
 
-    // When the Window is moved or resized, we will store the state of the action for later
-    window.moveResizedChanged.connect(() => {
-        tilingManager.moveResizedChangedForWindow(window);
-    });
+        // In case the Window is minimized, we have to react
+        window.maximizedAboutToChange.connect((maximizeMode) => {
+            tilingManager.maximizedChangedForWindow(window, maximizeMode);
+        });
 
-    window.interactiveMoveResizeFinished.connect(() => {
-        tilingManager.interactiveMoveResizeFinishedForWindow(window);
-    });
+        // When the Window is moved or resized, we will store the state of the action for later
+        window.moveResizedChanged.connect(() => {
+            tilingManager.moveResizedChangedForWindow(window);
+        });
 
-    // Window was moved to another Desktop
-    window.desktopsChanged.connect(() => {
-        tilingManager.desktopChangedForWindow(window);
-    });
+        window.interactiveMoveResizeFinished.connect(() => {
+            tilingManager.interactiveMoveResizeFinishedForWindow(window);
+        });
 
-    // Attach the Tiling manager for Windows Added
-    tilingManager.registerWindow(window);
+        // Window was moved to another Desktop
+        window.desktopsChanged.connect(() => {
+            tilingManager.desktopChangedForWindow(window);
+        });
+
+        // Attach the Tiling manager for Windows Added
+        tilingManager.registerWindow(window);
+    }
 });
 
 workspace.windowRemoved.connect((window) => {

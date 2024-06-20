@@ -273,6 +273,30 @@ export default class TilingManager {
             movedOrResizedWindow.isResized = null;
         }
     }
+    /**
+     * Decides if a Window is relevant at all to be Registered
+     *
+     * @param {*} kwinWindow
+     * @returns
+     */
+    isWindowRelevantForRegister(kwinWindow) {
+        // Check wheter the Window is in the List defined in the Configuration to be skipped
+        const ignoreList = this.globalConfiguration.ignoreList;
+
+        if (
+            ignoreList.indexOf(
+                this.kwinWrapper.getWindowResourceName(kwinWindow)
+            ) !== -1
+        )
+            return false;
+
+        // Check if the Window is not relevant based on his basic properties
+        if (!this.kwinWrapper.isWindowRelevantForRegister(kwinWindow)) {
+            return false;
+        }
+
+        return true;
+    }
 
     /**
      * Decides if a Window should be Tiled or not

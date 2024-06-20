@@ -115,9 +115,8 @@ export class KWinWrapper {
     /**
      * Since there are a lot of attributes and they are only used in one place
      */
-    isWindowRelevantForTiling(kwinWindow) {
+    isWindowRelevantForRegister(kwinWindow) {
         // Check if the Window is not relevant based on his basic properties
-        if (kwinWindow.fullScreen) return false;
         if (kwinWindow.dialog) return false;
         if (kwinWindow.splash) return false;
         if (kwinWindow.utility) return false;
@@ -130,12 +129,21 @@ export class KWinWrapper {
         if (kwinWindow.comboBox) return false;
         if (kwinWindow.dndIcon) return false;
         if (kwinWindow.specialWindow) return false;
-        if (kwinWindow.minimized) return false;
         if (kwinWindow.popupWindow) return false;
         if (kwinWindow.desktopWindow) return false;
         if (kwinWindow.toolbar) return false;
         if (kwinWindow.menu) return false;
 
+        return true;
+    }
+
+    /**
+     * Since there are a lot of attributes and they are only used in one place
+     */
+    isWindowRelevantForTiling(kwinWindow) {
+        // Check if the Window is not relevant based on his basic properties
+        if (kwinWindow.fullScreen) return false;
+        if (kwinWindow.minimized) return false;
         if (!kwinWindow.normalWindow) return false;
 
         return true;
