@@ -4,12 +4,18 @@ VERSION = $(shell npm pkg get version | tr -d '"')
 PKGFILE = $(NAME).kwinscript
 PKGDIR = pkg
 
+all: build
+
 install: clean
 
-build: cpyconfig
+build: cpyconfig cpysrc
+	zip -r $(PKGFILE) $(PKGDIR)
 
-clean:
+clean: $(PKGDIR)
 	rm -r $(PKGDIR)
+
+cleanpkg: $(PKGFILE)
+	rm $(PKGFILE)
 
 crtdir:	
 	mkdir -p $(PKGDIR)/contents/code
@@ -21,8 +27,8 @@ cpyconfig: crtdir
 	sed -i "s/%VERSION%/$(VERSION)/" $(PKGDIR)/metadata.json
 	sed -i "s/%NAME%/$(NAME)/" $(PKGDIR)/metadata.json
 
-transpile:
-	npm install
+buildsrc:
+	npm run build
 
-cpysrc: crtdir
-	
+cpysrc: crtdir buildsrc
+	cp -f build/reptile.js $(PKGDIR)/contents/code/main.js

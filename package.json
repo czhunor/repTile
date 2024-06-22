@@ -4,7 +4,7 @@
     "version": "0.1.0",
     "main": "src/script/index.mjs",
     "scripts": {
-        "build": "npx esbuild --bundle src/script/index.mjs --outfile=build/repTile.js --format=iife"
+        "build": "npx esbuild --bundle src/script/index.mjs --outfile=build/reptile.js --format=iife"
     },
     "devDependencies": {},
     "repository": {

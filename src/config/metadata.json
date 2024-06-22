@@ -2,7 +2,7 @@
     "KPlugin": {
         "Name": "repTile",
         "Description": "A simple and small Tiling script for KDE.",
-        "Icon": "preferences-system-windows",
+        "Icon": "reptile",
 
         "Authors": [
             {
