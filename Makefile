@@ -4,18 +4,24 @@ VERSION = $(shell npm pkg get version | tr -d '"')
 PKGFILE = $(NAME).kwinscript
 PKGDIR = pkg
 
-all: build
+all: build install clean
 
-install: clean
+install: installscript installicons
 
-build: cpyconfig cpysrc
-	zip -r $(PKGFILE) $(PKGDIR)
+build: buildscript buildicons
 
-clean: $(PKGDIR)
+cleanall: cleanpkg cleanscript cleanicons
+
+clean: cleanpkg cleanscript
+
+cleanscript: $(PKGDIR)
 	rm -r $(PKGDIR)
 
 cleanpkg: $(PKGFILE)
 	rm $(PKGFILE)
+
+cleanicons:
+	sh scripts/clean.sh
 
 crtdir:	
 	mkdir -p $(PKGDIR)/contents/code
@@ -27,8 +33,25 @@ cpyconfig: crtdir
 	sed -i "s/%VERSION%/$(VERSION)/" $(PKGDIR)/metadata.json
 	sed -i "s/%NAME%/$(NAME)/" $(PKGDIR)/metadata.json
 
+cpysrc: crtdir buildsrc
+	cp -f build/reptile.js $(PKGDIR)/contents/code/main.js
+
+buildscript: cpyconfig cpysrc
+	zip -r $(PKGFILE) $(PKGDIR)
+
 buildsrc:
 	npm run build
 
-cpysrc: crtdir buildsrc
-	cp -f build/reptile.js $(PKGDIR)/contents/code/main.js
+buildicons:
+	sh scripts/build.sh
+
+installicons:
+	sh scripts/install.sh
+
+installscript: $(PKGFILE)
+	kpackagetool6 -t KWin/Script -s $(NAME) \
+                && kpackagetool6 -t KWin/Script -u $(PKGFILE) \
+                || kpackagetool6 -t KWin/Script -i $(PKGFILE)
+	
+uninstallicons:
+	sh scripts/uninstall.sh

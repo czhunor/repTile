@@ -1,0 +1,20 @@
+{
+    "KPlugin": {
+        "Name": "repTile",
+        "Description": "A simple and small Tiling script for KDE.",
+        "Icon": "reptile",
+
+        "Authors": [
+            {
+                "Email": "czhunor@gmail.com",
+                "Name": "Hunor Czaka"
+            }
+        ],
+        "Id": "reptile",
+        "Version": "0.1.0",
+        "License": "GPLv3"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
+}

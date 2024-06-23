@@ -1,7 +1,6 @@
 # repTile 0.1
 
 A simple and small Tiling script for KDE.
-
 <img src="./img/repTile-logo-100.png " />
 
 ### Main goal of the Project
