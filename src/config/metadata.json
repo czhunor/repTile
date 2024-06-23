@@ -1,7 +1,7 @@
 {
     "KPlugin": {
         "Name": "repTile",
-        "Description": "A simple and small Tiling script for KDE.",
+        "Description": "A small Tiling Manager script for KDE KWin.",
         "Icon": "reptile",
 
         "Authors": [

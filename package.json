@@ -1,6 +1,6 @@
 {
     "name": "reptile",
-    "description": "A simple and small Tiling script for KDE",
+    "description": "A small Tiling Manager script for KDE KWin.",
     "version": "0.1.0",
     "main": "src/script/index.mjs",
     "scripts": {
