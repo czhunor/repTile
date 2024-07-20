@@ -7,6 +7,8 @@ import { Configuration } from "../tiling/configuration.mjs";
 
 export const MaximizeMode = { Maximized: 3, Normal: 0 };
 
+export const maxWindowSize = 2147483647;
+
 /**
  * Wrapper for the print Function (like console.log())
  * In order to see the result of the Log, you have to follow the steps, described on the offical KDE site:
@@ -20,6 +22,11 @@ export class KWinLog {
     constructor(knwinConfiguration) {
         this.globalConfiguration = knwinConfiguration;
     }
+
+    /**
+     *
+     * @param {string} sMessage
+     */
     printMessage(sMessage) {
         if (this.globalConfiguration.isLoggingEnabled) {
             print("repTile: " + sMessage);
@@ -133,6 +140,14 @@ export class KWinWrapper {
         if (kwinWindow.desktopWindow) return false;
         if (kwinWindow.toolbar) return false;
         if (kwinWindow.menu) return false;
+
+        // If a Windows maxSize is defined and lower then the default max Int
+        // will be considered as a pop up and will be ignored
+        /* if (
+            kwinWindow.maxSize.width != maxWindowSize ||
+            kwinWindow.maxSize.height != maxWindowSize
+        )
+            return false; */
 
         return true;
     }

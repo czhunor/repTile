@@ -123,6 +123,9 @@ export default class BaseLayout {
                     windowWidth,
                     windowHeight
                 );
+                this.logging.printMessage(
+                    `x: ${windowXPos}, y: ${windowYPos}, width: ${windowWidth}, height: ${windowHeight}`
+                );
             }
         }
     }

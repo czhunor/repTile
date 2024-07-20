@@ -377,9 +377,6 @@ export default class TilingManager {
             }
         });
 
-        /* this.logging.printMessage(
-            "-> windows found there: " + windowsForDesktop
-        ); */
         return windowsForDesktop;
     }
 

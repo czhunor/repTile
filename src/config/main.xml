@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+    <group name="">
+        <entry name="IgnoreList" type="StringList"><default>krunner, yakuake, spectacle, plasmashell</default></entry>
+        <entry name="BorderSize" type="Int"><default>10</default></entry>
+        <entry name="RootWindowPosition" type="String"><default>Right</default></entry>
+        <entry name="RootWindowSize" type="Double"><default>0.65</default></entry>
+        <entry name="RegisterAsRoot" type="StringList"><default>vscodium, codium, code, brave-browser</default></entry>
+        <entry name="IsLoggingEnabled" type="Bool"><default>false</default></entry>
+    </group>
+</kcfg>

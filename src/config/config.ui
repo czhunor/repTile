@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Kwin::ReptileConfigForm</class>
+ <widget class="QWidget" name="Kwin::ReptileConfigForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>687</width>
+    <height>644</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>repTile</string>
+  </property>
+  <widget class="QLabel" name="IgnoreList">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>60</y>
+     <width>190</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>Ignore Windows during tiling:</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="kcfg_IgnoreList">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>60</y>
+     <width>431</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>krunner, yakuake, spectacle, plasmashell</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="GeneralSettings">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>20</y>
+     <width>161</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>General settings</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="BorderSize">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>102</y>
+     <width>190</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Border size in pixels:</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="kcfg_BorderSize">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>102</y>
+     <width>80</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>10</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="RootWindowPosition">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>144</y>
+     <width>190</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Root Window position:</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="kcfg_RootWindowPosition">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>144</y>
+     <width>80</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Right</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Left</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="RootWindowSize">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>186</y>
+     <width>220</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Root Window size (% of the Screen):</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="kcfg_RootWindowSize">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>186</y>
+     <width>80</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>0.65</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="RegisterAsRoot">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>228</y>
+     <width>220</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Open Window as Root:</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="kcfg_RegisterAsRoot">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>228</y>
+     <width>431</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>vscodium, codium, code, brave-browser</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="DebugOptions">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>300</y>
+     <width>161</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Debug options</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="kcfg_IsLoggingEnabled">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>340</y>
+     <width>220</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Logging enabled</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

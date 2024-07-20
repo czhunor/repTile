@@ -10,11 +10,11 @@ install: installscript installicons
 
 build: buildscript buildicons
 
-cleanall: cleanpkg cleanscript cleanicons
+clean: cleanscript cleanicons
 
-clean: cleanpkg cleanscript
+cleanscript: cleanpkg cleandir
 
-cleanscript: $(PKGDIR)
+cleandir: $(PKGDIR)
 	rm -r $(PKGDIR)
 
 cleanpkg: $(PKGFILE)
@@ -28,15 +28,17 @@ crtdir:
 	mkdir $(PKGDIR)/contents/config
 	mkdir $(PKGDIR)/contents/ui
 
-cpyconfig: crtdir
-	cp -f src/config/metadata.json $(PKGDIR)/	
+cpyconfig:
+	cp -f src/config/metadata.json $(PKGDIR)/
 	sed -i "s/%VERSION%/$(VERSION)/" $(PKGDIR)/metadata.json
 	sed -i "s/%NAME%/$(NAME)/" $(PKGDIR)/metadata.json
+	cp -f src/config/main.xml $(PKGDIR)/contents/config/
+	cp -f src/config/config.ui $(PKGDIR)/contents/ui/
 
-cpysrc: crtdir buildsrc
+cpysrc: buildsrc
 	cp -f build/reptile.js $(PKGDIR)/contents/code/main.js
 
-buildscript: cpyconfig cpysrc
+buildscript: crtdir cpyconfig cpysrc
 	zip -r $(PKGFILE) $(PKGDIR)
 
 buildsrc:
