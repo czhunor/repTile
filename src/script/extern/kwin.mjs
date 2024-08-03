@@ -28,7 +28,7 @@ export class KWinLog {
      * @param {string} sMessage
      */
     printMessage(sMessage) {
-        if (this.globalConfiguration.isLoggingEnabled()) {
+        if (this.globalConfiguration.isLoggingEnabled) {
             print("repTile: " + sMessage);
         }
     }

@@ -281,7 +281,7 @@ export default class TilingManager {
      */
     isWindowRelevantForRegister(kwinWindow) {
         // Check wheter the Window is in the List defined in the Configuration to be skipped
-        const ignoreList = this.globalConfiguration.ignoreList();
+        const ignoreList = this.globalConfiguration.ignoreList;
 
         if (
             ignoreList.indexOf(
@@ -306,10 +306,10 @@ export default class TilingManager {
      * @returns
      */
     _isWindowRelevant(kwinWindow, customWindow = null) {
-        if (!this.globalConfiguration.isTilingEnabled()) return false;
+        if (!this.globalConfiguration.isTilingEnabled) return false;
 
         // Check wheter the Window is in the List defined in the Configuration to be skipped
-        const ignoreList = this.globalConfiguration.ignoreList();
+        const ignoreList = this.globalConfiguration.ignoreList;
 
         if (
             ignoreList.indexOf(
@@ -470,7 +470,7 @@ export default class TilingManager {
      * @returns
      */
     _shouldWindowRegisterAsRoot(kwinWindow) {
-        const registerAsRoot = this.globalConfiguration.registerAsRoot();
+        const registerAsRoot = this.globalConfiguration.registerAsRoot;
 
         const shouldWindowRegisterAsRoot =
             registerAsRoot.indexOf(

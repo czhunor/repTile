@@ -5,67 +5,57 @@ export class Configuration {
         /**
          * The size of th Root Window defined in percentage
          *
-         * @returns  {number}
+         * @type  {number}
          */
-        this.rootWindowDefaultSizeInPercentage = () => {
-            return this._readConfig("RootWindowSize", 0.65);
-        };
+        this.rootWindowDefaultSizeInPercentage = this._readConfig(
+            "RootWindowSize",
+            0.65
+        );
 
         /**
          * The position of the Root Window
          *
-         * @returns {string}
+         * @type {string}
          */
-        this.rootWindowPosition = () => {
-            return this._readConfig("RootWindowPosition", 0) == 0
+        this.rootWindowPosition =
+            this._readConfig("RootWindowPosition", 0) == 0
                 ? Position.Right
                 : Position.Left;
-        };
 
         /**
          * The gap between the Windows and Window and Border of the Screen
          *
-         * @returns {number}
+         * @type {number}
          */
-        this.padding = () => {
-            return this._readConfig("BorderSize", 10);
-        };
+        this.padding = this._readConfig("BorderSize", 10);
 
         /**
          * List of Windows which will be ignored during the execution of the TilingManager
          *
-         * @returns {Array}
+         * @type {Array}
          */
-        this.ignoreList = () => {
-            return this._readIgnoreList();
-        };
+        this.ignoreList = this._readIgnoreList();
 
         /**
          * List of Windows which should be placed as Root Window when they are Opened the first time
          *
-         * @returns {Array}
+         * @type {Array}
          */
-        this.registerAsRoot = () => {
-            return this._readRegisterAsRoot();
-        };
+        this.registerAsRoot = this._readRegisterAsRoot();
 
         /**
          * Tiling toggle for all Windows on all Screens/Desktops
          *
-         * @returns {boolean}
+         * @type {boolean}
          */
-        this.isTilingEnabled = () => {
-            return true;
-        };
+        this.isTilingEnabled = true;
 
         /**
          * Logging toggle for 'journalctl -f QT_CATEGORY=js QT_CATEGORY=kwin_scripting'
          *
-         * @returns {boolean}
+         * @type {boolean}
          */
-        this.isLoggingEnabled = () => {
-            return this._readConfig("IsLoggingEnabled", true);
-        };
+        this.isLoggingEnabled = this._readConfig("IsLoggingEnabled", true);
     }
 
     /**
