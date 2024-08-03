@@ -28,7 +28,7 @@ export class KWinLog {
      * @param {string} sMessage
      */
     printMessage(sMessage) {
-        if (this.globalConfiguration.isLoggingEnabled) {
+        if (this.globalConfiguration.isLoggingEnabled()) {
             print("repTile: " + sMessage);
         }
     }
@@ -82,10 +82,10 @@ export class KWinWrapper {
     // --- WINDOW API
     setWindowPosition(kwinWindow, x, y, width, height) {
         kwinWindow.frameGeometry = {
-            x: x,
-            y: y,
-            width: width,
-            height: height,
+            x: Math.trunc(x),
+            y: Math.trunc(y),
+            width: Math.trunc(width),
+            height: Math.trunc(height),
         };
     }
 

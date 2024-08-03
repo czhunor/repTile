@@ -22,9 +22,9 @@ export default class BaseLayout {
 
         // Padding around the Windows in Pixel,
         // it will be considered during the calculation of the Window sizes
-        const padding = this.globalConfiguration.padding;
+        const padding = this.globalConfiguration.padding();
         const rootWindowDefaultSizeInPercentage =
-            this.globalConfiguration.rootWindowDefaultSizeInPercentage;
+            this.globalConfiguration.rootWindowDefaultSizeInPercentage();
 
         const screenXPos = this.kwinWrapper.getActiveScreenXPos() + padding;
         const screenYPos = this.kwinWrapper.getActiveScreenYPos() + padding;
@@ -83,7 +83,7 @@ export default class BaseLayout {
                     windowWidth = rootWindowWidth;
                     windowHeight = rootWindowHeight;
                     windowXPos =
-                        this.globalConfiguration.rootWindowPosition ===
+                        this.globalConfiguration.rootWindowPosition() ===
                         Position.Right
                             ? screenXPos + secondaryWindowWidth + padding
                             : screenXPos;
@@ -99,7 +99,7 @@ export default class BaseLayout {
                     windowWidth = secondaryWindowWidth;
                     windowHeight = secondaryWindowHeight;
                     windowXPos =
-                        this.globalConfiguration.rootWindowPosition ===
+                        this.globalConfiguration.rootWindowPosition() ===
                         Position.Right
                             ? screenXPos
                             : screenXPos + rootWindowWidth + padding;

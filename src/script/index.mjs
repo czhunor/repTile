@@ -62,12 +62,6 @@ for (let i = 0; i < windows.length; i++) {
 workspace.windowAdded.connect((window) => {
     // Only register relevant Windows
     if (tilingManager.isWindowRelevantForRegister(window)) {
-        // Temporary only for logging/testing
-        kwinLog.printMessage(
-            `-> minSize: ${window.minSize} | maxSize: ${window.maxSize}`
-        );
-        kwinLog.printMessage(`-> resizeable: ${window.resizeable}`);
-
         // TODO Move to somewhere else
         // Setting of some properties of the Windows in order to bahave normally within the
         // tiling process
