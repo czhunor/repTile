@@ -296,7 +296,9 @@ export default class TilingManager {
         if (
             customWindow.isTiled &&
             !customWindow.isMoved &&
-            !customWindow.isResized
+            !customWindow.isResized &&
+            !customWindow.isMaximized &&
+            this.kwinWrapper.isWindowRelevantForTiling(kwinWindow)
         ) {
             // Actual Position of the current window provided from KWin
             const actualPosition =
