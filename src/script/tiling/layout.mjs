@@ -1,5 +1,6 @@
 import { KWinLog, KWinWrapper } from "../extern/kwin.mjs";
 import { Configuration, Position } from "./configuration.mjs";
+import { Windowz, WindowzContainer } from "./window-manager.mjs";
 
 export default class BaseLayout {
     /**
@@ -7,13 +8,21 @@ export default class BaseLayout {
      * @param {KWinLog} kwinLog
      * @param {KWinWrapper} kwinWrapper
      * @param {Configuration} knwinConfiguration
+     * @param {WindowzContainer} windowzContainer
      */
-    constructor(kwinLog, kwinWrapper, knwinConfiguration) {
+    constructor(kwinLog, kwinWrapper, knwinConfiguration, windowzContainer) {
         this.logging = kwinLog;
         this.kwinWrapper = kwinWrapper;
         this.globalConfiguration = knwinConfiguration;
+        this.windowzContainer = windowzContainer;
     }
 
+    /**
+     *
+     * @param {*} desktop
+     * @param {*} kwinWindows
+     * @returns
+     */
     tileWindowsOnDesktop(desktop, kwinWindows) {
         // -> if no windows on desktop, nothing to do
         if (kwinWindows === undefined || kwinWindows.length === 0) {
@@ -42,6 +51,13 @@ export default class BaseLayout {
             const windowYPos = screenYPos;
             const windowWidth = screenWidth;
             const windowHeight = screenHeight;
+
+            this._setAdditionalCustomInformation(kwinWindows[0], {
+                x: windowXPos,
+                y: windowYPos,
+                height: windowHeight,
+                width: windowWidth,
+            });
 
             this.kwinWrapper.setWindowPosition(
                 kwinWindows[0],
@@ -116,6 +132,18 @@ export default class BaseLayout {
                     );
                 }
 
+                windowHeight = Math.trunc(windowHeight);
+                windowWidth = Math.trunc(windowWidth);
+                windowXPos = Math.trunc(windowXPos);
+                windowYPos = Math.trunc(windowYPos);
+
+                this._setAdditionalCustomInformation(kwinWindows[i], {
+                    x: windowXPos,
+                    y: windowYPos,
+                    height: windowHeight,
+                    width: windowWidth,
+                });
+
                 this.kwinWrapper.setWindowPosition(
                     kwinWindows[i],
                     windowXPos,
@@ -128,5 +156,14 @@ export default class BaseLayout {
                 );
             }
         }
+    }
+
+    _setAdditionalCustomInformation(kwinWindow, newPosition) {
+        // Store Some additional information on the custom Windowz object
+        let customWindow = this.windowzContainer.getRegisteredWindowById(
+            this.kwinWrapper.getWindowInternalId(kwinWindow)
+        );
+        customWindow.position = newPosition;
+        customWindow.isTiled = true;
     }
 }

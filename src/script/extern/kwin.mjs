@@ -82,10 +82,10 @@ export class KWinWrapper {
     // --- WINDOW API
     setWindowPosition(kwinWindow, x, y, width, height) {
         kwinWindow.frameGeometry = {
-            x: Math.trunc(x),
-            y: Math.trunc(y),
-            width: Math.trunc(width),
-            height: Math.trunc(height),
+            x: x,
+            y: y,
+            width: width,
+            height: height,
         };
     }
 

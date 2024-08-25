@@ -1,6 +1,7 @@
 import { KWinLog, KWinWrapper, MaximizeMode } from "../extern/kwin.mjs";
 import { Configuration } from "./configuration.mjs";
 import BaseLayout from "./layout.mjs";
+import { Windowz, WindowzContainer } from "./window-manager.mjs";
 
 /**
  * The Main Actor in the Script, the Tiling Manager
@@ -16,12 +17,17 @@ export default class TilingManager {
      * @param {Configuration} knwinConfiguration
      */
     constructor(kwinLog, kwinWrapper, knwinConfiguration) {
-        /** @type {Windowz[]} */
-        this.registeredWindows = [];
+        /** @type {WindowzContainer} */
+        this.windowzContainer = new WindowzContainer();
         this.logging = kwinLog;
         this.kwinWrapper = kwinWrapper;
         this.globalConfiguration = knwinConfiguration;
-        this.layout = new BaseLayout(kwinLog, kwinWrapper, knwinConfiguration);
+        this.layout = new BaseLayout(
+            kwinLog,
+            kwinWrapper,
+            knwinConfiguration,
+            this.windowzContainer
+        );
     }
 
     /**
@@ -45,8 +51,8 @@ export default class TilingManager {
         );
 
         this._shouldWindowRegisterAsRoot(kwinWindow)
-            ? this.registeredWindows.unshift(addedWindow) // Add to the beginning of the list if it's Root
-            : this.registeredWindows.push(addedWindow); // otherwise, to the end
+            ? this.windowzContainer.registeredWindows.unshift(addedWindow) // Add to the beginning of the list if it's Root
+            : this.windowzContainer.registeredWindows.push(addedWindow); // otherwise, to the end
 
         this.logging.printMessage("-> window added to the Tiling Manager");
 
@@ -175,8 +181,8 @@ export default class TilingManager {
         registeredWindow.kwinDesktop = newDesktop;
 
         this._shouldWindowRegisterAsRoot(kwinWindow)
-            ? this.registeredWindows.unshift(registeredWindow) // Add to the beginning of the list if it's Root
-            : this.registeredWindows.push(registeredWindow); // otherwise, to the end
+            ? this.windowzContainer.registeredWindows.unshift(registeredWindow) // Add to the beginning of the list if it's Root
+            : this.windowzContainer.registeredWindows.push(registeredWindow); // otherwise, to the end
 
         this.logging.printMessage("-> window added to the Tiling Manager");
 
@@ -273,6 +279,59 @@ export default class TilingManager {
             movedOrResizedWindow.isResized = null;
         }
     }
+
+    /**
+     * HOOK Method
+     * If a window size was changed, in some cases the size we provided during tiling gets
+     * overwritten. In these cases, we set the size back to the one provided during tiling.
+     *
+     * @param {*} kwinWindow
+     */
+    frameGeometryChangedForWindow(kwinWindow) {
+        const customWindow = this.windowzContainer.getRegisteredWindowById(
+            this.kwinWrapper.getWindowInternalId(kwinWindow)
+        );
+
+        // Check wheter the Window was Tiled not Moved and not Resized, only those are relevant
+        if (
+            customWindow.isTiled &&
+            !customWindow.isMoved &&
+            !customWindow.isResized
+        ) {
+            // Actual Position of the current window provided from KWin
+            const actualPosition =
+                this.kwinWrapper.getWindowPosition(kwinWindow);
+            // Determined Position during Tiling
+            const tiledPosition = customWindow.position;
+
+            if (
+                actualPosition.x != tiledPosition.x ||
+                actualPosition.y != tiledPosition.y ||
+                actualPosition.width != tiledPosition.width ||
+                actualPosition.height != tiledPosition.height
+            ) {
+                this.logging.printMessage(
+                    `Frame Geometry Changed For Window and Window was already Tiled.`
+                );
+                this.logging.printMessage(
+                    `-> actual Position x: ${actualPosition.x}, y: ${actualPosition.y}, width: ${actualPosition.width}, height: ${actualPosition.height}`
+                );
+                this.logging.printMessage(
+                    `-> tiled Position x: ${tiledPosition.x}, y: ${tiledPosition.y}, width: ${tiledPosition.width}, height: ${tiledPosition.height}`
+                );
+
+                // The position not the same, we set the tiled position again
+                this.kwinWrapper.setWindowPosition(
+                    kwinWindow,
+                    tiledPosition.x,
+                    tiledPosition.y,
+                    tiledPosition.width,
+                    tiledPosition.height
+                );
+            }
+        }
+    }
+
     /**
      * Decides if a Window is relevant at all to be Registered
      *
@@ -359,7 +418,7 @@ export default class TilingManager {
     _getWindowsForDesktop(desktop) {
         let windowsForDesktop = [];
 
-        this.registeredWindows.forEach((customWindow) => {
+        this.windowzContainer.registeredWindows.forEach((customWindow) => {
             if (
                 this.kwinWrapper.getWindowDesktop(customWindow.kwinWindow) ===
                 desktop
@@ -456,11 +515,12 @@ export default class TilingManager {
         this.logging.printMessage("--> index WindowTwo: " + indexWindowTwo);
 
         // Swap places
-        const tempWindowOne = this.registeredWindows[indexWindowOne];
+        const tempWindowOne =
+            this.windowzContainer.registeredWindows[indexWindowOne];
 
-        this.registeredWindows[indexWindowOne] =
-            this.registeredWindows[indexWindowTwo];
-        this.registeredWindows[indexWindowTwo] = tempWindowOne;
+        this.windowzContainer.registeredWindows[indexWindowOne] =
+            this.windowzContainer.registeredWindows[indexWindowTwo];
+        this.windowzContainer.registeredWindows[indexWindowTwo] = tempWindowOne;
     }
 
     /**
@@ -486,33 +546,16 @@ export default class TilingManager {
     }
 
     _removeWindowFromRegisteredList(kwinWindow) {
-        const index = this._getRegisteredWindowIndexById(
+        return this.windowzContainer.removeWindowFromRegisteredList(
             this.kwinWrapper.getWindowInternalId(kwinWindow)
         );
-
-        if (index !== -1) {
-            this.registeredWindows.splice(index, 1);
-            return true; // If it was removed, return true
-        } else return false; // If the window was not in the list, return false
     }
 
     _getRegisteredWindowById(id) {
-        return this.registeredWindows.find((element) => element.id === id);
+        return this.windowzContainer.getRegisteredWindowById(id);
     }
 
     _getRegisteredWindowIndexById(id) {
-        return this.registeredWindows.findIndex((element) => element.id === id);
-    }
-}
-
-class Windowz {
-    constructor(id, kwinWindow, desktop) {
-        this.id = id; // KWin Window  - internalId
-        this.kwinWindow = kwinWindow; // KWin Window
-        this.kwinDesktop = desktop; // KWin Desktop
-        this.isFloating = false;
-        this.isMaximized = false;
-        this.isMoved = null;
-        this.isResized = null;
+        return this.windowzContainer.getRegisteredWindowIndexById(id);
     }
 }
