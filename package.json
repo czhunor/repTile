@@ -1,7 +1,7 @@
 {
     "name": "reptile",
     "description": "A small Tiling Manager script for KDE KWin.",
-    "version": "0.1.23",
+    "version": "0.1.27",
     "main": "src/script/index.mjs",
     "scripts": {
         "build": "npx esbuild --bundle src/script/index.mjs --outfile=build/reptile.js --format=iife"

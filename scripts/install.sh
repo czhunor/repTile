@@ -3,8 +3,14 @@
 # Exit if some error happens
 set -e
 
-echo "Installing icons.."
+file_path="/usr/share/icons/hicolor/22x22/categories/reptile.png"
 
-sudo cmake --install build
+if [ ! -e "$file_path" ]; then
+    echo "Installing icons.."
 
-echo "Done."
+    sudo cmake --install build
+
+    echo "Done."
+else 
+    echo "Icons already installed, nothing to do."
+fi

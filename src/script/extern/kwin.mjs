@@ -13,7 +13,7 @@ export const maxWindowSize = 2147483647;
  * Wrapper for the print Function (like console.log())
  * In order to see the result of the Log, you have to follow the steps, described on the offical KDE site:
  *      https://develop.kde.org/docs/plasma/kwin/#output
- *
+ *      journalctl -f QT_CATEGORY=js QT_CATEGORY=kwin_scripting
  */
 export class KWinLog {
     /**
